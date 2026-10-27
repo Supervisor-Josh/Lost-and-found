@@ -5,9 +5,11 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 from passlib.context import CryptContext
 
-from . import models, schemas
-from . import database
-from .database import engine, get_db
+# Absolute imports (no dots)
+import models
+import schemas
+import database
+from database import engine
 
 # Create database tables automatically
 models.Base.metadata.create_all(bind=engine)
@@ -65,12 +67,12 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
 
 # --- Item Endpoints ---
 @app.post("/items/", response_model=schemas.ItemResponse, status_code=status.HTTP_201_CREATED)
-def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(get_db)):
+def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    # Changed .dict() to .model_dump() for Pydantic v2 compatibility
+    # .model_dump() is the correct Pydantic v2 method
     new_item = models.Item(**item.model_dump(), user_id=user_id)
     db.add(new_item)
     db.commit()
@@ -78,12 +80,12 @@ def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(ge
     return new_item
 
 @app.get("/items/", response_model=List[schemas.ItemResponse])
-def get_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_items(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     items = db.query(models.Item).offset(skip).limit(limit).all()
     return items
 
 @app.get("/items/{item_id}", response_model=schemas.ItemResponse)
-def get_item(item_id: int, db: Session = Depends(get_db)):
+def get_item(item_id: int, db: Session = Depends(database.get_db)):
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -91,7 +93,7 @@ def get_item(item_id: int, db: Session = Depends(get_db)):
 
 # --- Claim Endpoints ---
 @app.post("/items/{item_id}/claims/", response_model=schemas.ClaimResponse, status_code=status.HTTP_201_CREATED)
-def create_claim(item_id: int, claim: schemas.ClaimCreate, user_id: int, db: Session = Depends(get_db)):
+def create_claim(item_id: int, claim: schemas.ClaimCreate, user_id: int, db: Session = Depends(database.get_db)):
     item = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
