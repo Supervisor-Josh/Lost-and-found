@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 from passlib.context import CryptContext
-import database
+
 from . import models, schemas
+from . import database
 from .database import engine, get_db
 
 # Create database tables automatically
@@ -23,25 +25,19 @@ app.add_middleware(
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Update your password hashing function in backend/main.py to look like this:
 def get_password_hash(password: str):
     # Bcrypt has a strict 72-byte limit
     return pwd_context.hash(password[:72])
+
 # --- Root Endpoint ---
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Lost and Found API"}
 
 # --- User Endpoints ---
-from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-# ... (keep your existing imports, database, models, and schemas)
-
 @app.post("/users/", status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     try:
-        # Safely hash password (truncating to 72 bytes for bcrypt safety)
         hashed_password = get_password_hash(user.password[:72])
         
         db_user = models.User(
@@ -66,6 +62,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
             status_code=500,
             detail=str(e)
         )
+
 # --- Item Endpoints ---
 @app.post("/items/", response_model=schemas.ItemResponse, status_code=status.HTTP_201_CREATED)
 def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(get_db)):
@@ -73,7 +70,8 @@ def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(ge
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    new_item = models.Item(**item.dict(), user_id=user_id)
+    # Changed .dict() to .model_dump() for Pydantic v2 compatibility
+    new_item = models.Item(**item.model_dump(), user_id=user_id)
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
