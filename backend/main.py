@@ -40,13 +40,14 @@ def read_root():
 @app.post("/users/", status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     try:
+        # Safely hash password (truncating to 72 bytes for bcrypt safety)
         hashed_password = get_password_hash(user.password[:72])
         
         db_user = models.User(
             name=user.name,
             email=user.email,
             phone=user.phone,
-            hashed_password=hashed_password
+            password_hash=hashed_password  # <--- Changed to match models.py
         )
         db.add(db_user)
         db.commit()
@@ -64,7 +65,6 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
             status_code=500,
             detail=str(e)
         )
-
 # --- Item Endpoints ---
 @app.post("/items/", response_model=schemas.ItemResponse, status_code=status.HTTP_201_CREATED)
 def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(database.get_db)):
