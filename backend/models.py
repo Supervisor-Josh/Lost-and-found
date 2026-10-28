@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Date, Enum, ForeignKey, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from .database import Base
+from database import Base
 import enum
 
 class ItemStatus(str, enum.Enum):

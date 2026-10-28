@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from datetime import date, datetime
 from typing import Optional, List
-from .models import ItemStatus, ClaimStatus
+from models import ItemStatus, ClaimStatus
 
 # --- User Schemas ---
 class UserCreate(BaseModel):
