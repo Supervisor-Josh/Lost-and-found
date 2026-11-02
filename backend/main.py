@@ -3,16 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import List
-from passlib.context import CryptContext
+import bcrypt
 
-# Absolute imports (no dots)
-import models
-import schemas
-import database
-from database import engine
+
+# Import local backend modules relative to this file
+from . import database, models, schemas
 
 # Create database tables automatically
-models.Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Lost and Found API", version="1.0.0")
 
@@ -25,19 +23,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 def get_password_hash(password: str):
-    # Bcrypt has a strict 72-byte limit
-    return pwd_context.hash(password[:72])
+    # Truncate to 72 bytes max for bcrypt safety, encode to bytes, and hash
+    pwd_bytes = password[:72].encode('utf-8')
+    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
 
+def verify_password(plain_password: str, hashed_password: str):
+    return bcrypt.checkpw(plain_password[:72].encode('utf-8'), hashed_password.encode('utf-8'))
 # --- Root Endpoint ---
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Lost and Found API"}
 
 # --- User Endpoints ---
-@app.post("/users/", status_code=status.HTTP_201_CREATED)
+@app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     try:
         # Safely hash password (truncating to 72 bytes for bcrypt safety)
@@ -47,7 +48,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
             name=user.name,
             email=user.email,
             phone=user.phone,
-            password_hash=hashed_password  # <--- Changed to match models.py
+            password_hash=hashed_password
         )
         db.add(db_user)
         db.commit()
@@ -65,6 +66,14 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
             status_code=500,
             detail=str(e)
         )
+
+# Add this missing route so the frontend can fetch user profiles successfully
+@app.get("/users/{user_id}", response_model=schemas.UserResponse)
+def get_user(user_id: int, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 # --- Item Endpoints ---
 @app.post("/items/", response_model=schemas.ItemResponse, status_code=status.HTTP_201_CREATED)
 def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(database.get_db)):
