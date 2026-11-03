@@ -38,7 +38,7 @@ def read_root():
     return {"message": "Welcome to the Lost and Found API"}
 
 # --- User Endpoints ---
-@app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     try:
         # Safely hash password (truncating to 72 bytes for bcrypt safety)
@@ -75,7 +75,7 @@ def get_user(user_id: int, db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 # --- Item Endpoints ---
-@app.post("/items/", response_model=schemas.ItemResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/items", response_model=schemas.ItemResponse, status_code=status.HTTP_201_CREATED)
 def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(database.get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
@@ -88,7 +88,7 @@ def report_item(item: schemas.ItemCreate, user_id: int, db: Session = Depends(da
     db.refresh(new_item)
     return new_item
 
-@app.get("/items/", response_model=List[schemas.ItemResponse])
+@app.get("/items", response_model=List[schemas.ItemResponse])
 def get_items(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
     items = db.query(models.Item).offset(skip).limit(limit).all()
     return items

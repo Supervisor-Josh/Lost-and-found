@@ -28,7 +28,7 @@ export default function App() {
   const fetchItems = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/items/`);
+      const res = await fetch(`${API_BASE}/items`);
       const data = await res.json();
       setItems(data);
     } catch (err) {
@@ -46,7 +46,7 @@ export default function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${API_BASE}/users/`, {
+      const res = await fetch(`${API_BASE}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(regData)
