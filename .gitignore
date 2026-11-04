@@ -1,14 +1,29 @@
 # Python
-venv/
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
 *.sqlite3
+*.sqlite3-*
+*.db
+*.sqbpro
+backend/lost_and_found.sqbpro
 
 # Node / Frontend
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
 .vite/
+frontend/.vite/
 .DS_Store
 
 # Environment & Local Configs
 .env
+.env.*
+!.env.example
